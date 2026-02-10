@@ -1,0 +1,4 @@
+1.tensorflow-cpu
+2.opencv-python-headless
+3.numpy
+4.pillow
