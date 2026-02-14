@@ -35,3 +35,19 @@ Clone the repository:
 Install dependencies:
 
 Run the application:
+
+⚠️ Important Usage Instructions
+For maximum accuracy, CardioVision requires a specific input format:
+
+Target Lead: The model is optimized for Lead II (the long strip usually at the bottom of an ECG).
+
+Manual Cropping: Users should crop the image to include only the Lead II waveform, removing the grid labels, patient info, and other leads.
+
+Aspect Ratio: While the app resizes images to 224x224, keeping the crop tight around the signal prevents distortion.
+
+⚡ Future Scope
+Explainability: Integrating Grad-CAM to provide visual evidence for AI predictions, highlighting key ECG morphological features.
+
+Preprocessing: Implementing Automated ROI (Region of Interest) extraction to automatically detect and crop Lead II from full 12-lead ECG sheets.
+
+Mobile Optimization: Converting the model to TensorFlow Lite for real-time mobile inference.
