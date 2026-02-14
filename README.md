@@ -2,7 +2,7 @@
 
 CardioVision is an end-to-end Deep Learning application designed for automated heart attack detection from ECG images. By leveraging a fine-tuned VGG16 Convolutional Neural Network (CNN), the system provides high-precision classification into four distinct cardiac health categories.
 
-🚀 Live Demo
+🚀 Live Demo:- https://cardiovisionapp-h.streamlit.app/
 
 🛠️ Technical Features
 Deep Learning Architecture: Utilizes a fine-tuned VGG16 model for sophisticated feature extraction from ECG scans.
