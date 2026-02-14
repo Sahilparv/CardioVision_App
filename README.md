@@ -46,6 +46,7 @@ Manual Cropping: Users should crop the image to include only the Lead II wavefor
 Aspect Ratio: While the app resizes images to 224x224, keeping the crop tight around the signal prevents distortion.
 
 ⚡ Future Scope
+
 Explainability: Integrating Grad-CAM to provide visual evidence for AI predictions, highlighting key ECG morphological features.
 
 Preprocessing: Implementing Automated ROI (Region of Interest) extraction to automatically detect and crop Lead II from full 12-lead ECG sheets.
