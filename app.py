@@ -3,6 +3,84 @@ import tensorflow as tf
 from PIL import Image, ImageOps
 import numpy as np
 import pandas as pd # Needed for the new bar chart
+import cv2
+import matplotlib.cm as cm
+
+def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
+    # 1. Safely handle inputs/outputs without extra brackets
+    grad_model = tf.keras.models.Model(
+        inputs=model.inputs,
+        outputs=[model.get_layer(last_conv_layer_name).output, model.output]
+    )
+
+    # 2. Compute the Gradient
+    with tf.GradientTape() as tape:
+        outputs = grad_model(img_array)
+        last_conv_layer_output = outputs[0]
+        preds = outputs[1]
+        
+        # TF Version safety: if preds is hidden inside a list, extract it
+        if isinstance(preds, list):
+            preds = preds[0]
+            
+        if pred_index is None:
+            pred_index = tf.argmax(preds[0])
+        
+        # Now we can safely slice it
+        class_channel = preds[:, pred_index]
+
+    # 3. Calculate weights and heatmap
+    grads = tape.gradient(class_channel, last_conv_layer_output)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+    
+    last_conv_layer_output = last_conv_layer_output[0]
+    
+    # Bulletproof matrix multiplication syntax
+    heatmap = last_conv_layer_output @ tf.expand_dims(pooled_grads, axis=-1)
+    heatmap = tf.squeeze(heatmap)
+
+    # 4. Normalize the heatmap between 0 & 1
+    heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
+    return heatmap.numpy()
+
+    # Compute the Gradient
+    with tf.GradientTape() as tape:
+        last_conv_layer_output, preds = grad_model(img_array)
+        if pred_index is None:
+            pred_index = tf.argmax(preds[0])
+        class_channel = preds[:, pred_index]
+
+    # Calculate weights and heatmap
+    grads = tape.gradient(class_channel, last_conv_layer_output)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+    last_conv_layer_output = last_conv_layer_output[0]
+    heatmap = last_conv_layer_output @ pooled_grads[..., tf.newaxis]
+    heatmap = tf.squeeze(heatmap)
+
+    # Normalize between 0 and 1
+    heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
+    return heatmap.numpy()
+
+def overlay_heatmap(img_path, heatmap, alpha=0.4):
+    # Load original image
+    img = cv2.imread(img_path)
+    img = cv2.resize(img, (224, 224)) # Match your VGG16 input size
+
+    # Rescale heatmap to 0-255
+    heatmap = np.uint8(255 * heatmap)
+
+    # Colorize heatmap
+    jet = cm.get_cmap("jet")
+    jet_colors = jet(np.arange(256))[:, :3]
+    jet_heatmap = jet_colors[heatmap]
+
+    # Resize and blend
+    jet_heatmap = cv2.resize(jet_heatmap, (img.shape[1], img.shape[0]))
+    jet_heatmap = np.uint8(255 * jet_heatmap)
+    superimposed_img = jet_heatmap * alpha + img
+    
+    # Convert BGR to RGB for Streamlit
+    return cv2.cvtColor(np.uint8(superimposed_img), cv2.COLOR_BGR2RGB)
 
 
 
@@ -117,3 +195,33 @@ with col2:
             
             # Display Bar Chart
             st.bar_chart(chart_data, x="Condition", y="Probability", color="#FF4B4B")
+
+            # --- GRAD-CAM EXPLAINABLE AI SECTION ---
+            st.write("---")
+            st.subheader("🧠 AI Attention Map (Grad-CAM)")
+            st.write("This heatmap shows exactly where the AI looked to make its decision. Red/Yellow areas indicate high focus.")
+
+            try:
+                # 1. Save the uploaded file temporarily so OpenCV can read it
+                temp_path = "temp_ecg.jpg"
+                with open(temp_path, "wb") as f:
+                    f.write(file.getbuffer())
+
+                # 2. VGG16's last convolutional layer is usually named 'block5_conv3'
+                last_conv_layer = "block5_conv3" 
+                
+                # 3. Generate the heatmap using your 'data' variable
+                heatmap = make_gradcam_heatmap(data, model, last_conv_layer)
+                
+                # 4. Overlay it on the image
+                gradcam_result = overlay_heatmap(temp_path, heatmap)
+
+                # 5. Display Side-by-Side (Renamed columns to avoid conflict)
+                gc_col1, gc_col2 = st.columns(2)
+                with gc_col1:
+                    st.image(file, caption="Original Input", use_container_width=True)
+                with gc_col2:
+                    st.image(gradcam_result, caption="AI Heatmap", use_container_width=True, channels="RGB")
+
+            except Exception as e:
+                st.warning(f"Could not generate Grad-CAM visualization. Error: {e}")
