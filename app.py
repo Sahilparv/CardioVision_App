@@ -141,7 +141,7 @@ with col1:
 
         # --- PREPROCESSING ---
         size = (224, 224)
-        image = ImageOps.fit(image, size, Image.Resampling.LANCZOS)
+        image = ImageOps.pad(image, size, method=Image.Resampling.LANCZOS, color=(255, 255, 255))
         img_array = np.asarray(image)
         normalized_image_array = (img_array.astype(np.float32) / 255.0)
         data = np.expand_dims(normalized_image_array, axis=0)
